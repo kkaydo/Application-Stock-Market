@@ -1,0 +1,113 @@
+# import libraries
+import pandas_datareader as pdr
+import datetime
+import pandas as pd
+import numpy as np
+
+# Allow the full width of the data frame to show.
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
+
+
+# methods
+def getStock(stock,days):
+    dt = datetime.date.today()
+    dtPast = dt + datetime.timedelta(days=-days)
+
+    # Call Yahoo finance to get stock data for the stock provided.
+    df = pdr.get_data_yahoo(stock,
+                            start=datetime.datetime(dtPast.year,dtPast.month,dtPast.day),
+                            end=datetime.datetime(dt.year,dt.month,dt.day))
+
+    # Return a dataframe containing stock data to the calling instruction.
+    return df
+
+
+def getIndex(df,columnName):
+    columnList = list(df.columns)
+    for i in range(0, len(columnList)):
+        if columnList[i] == columnName:
+            columnIndex = i
+    return columnIndex
+
+
+def stockChanges(df):
+    df2 = df[["Close", "Volume"]]
+    df2["Volume % Change"] = 0.0000
+    df2["Close % Change"] = 0.0000
+
+    # finding column index
+    volumeChangeIDX = getIndex(df2,"Volume % Change")
+    closeChangeIDX = getIndex(df2, "Close % Change")
+
+    # calculate % change and update values
+    for i in range(0,len(df2)-1):
+        volumeOld = df2.iloc[i]['Volume']
+        volumeNew = df2.iloc[i+1]['Volume']
+        df2.iat[i+1,volumeChangeIDX] = round((volumeNew - volumeOld)/volumeNew,4)
+
+        closeOld = df2.iloc[i]['Close']
+        closeNew = df2.iloc[i+1]['Close']
+        df2.iat[i+1,closeChangeIDX] = round((closeNew - closeOld)/closeNew,4)
+    return df2
+
+
+def cumulativeChanges(df):
+    # get the last index of dataframe
+    lastInd = len(df)-1
+
+    volumeOld = df.iloc[0]['Volume']
+    volumeNew = df.iloc[lastInd]['Volume']
+    volumeChange = round((volumeNew - volumeOld)/volumeNew,3)
+
+    closeOld = df.iloc[0]['Close']
+    closeNew = df.iloc[lastInd]['Close']
+    closeChange = round((closeNew - closeOld)/closeNew,3)
+
+    # print messages:
+    print("% Volume Change:      " + str(volumeChange))
+    print("% Close Price Change: " + str(closeChange))
+
+###### application for checking stock information.
+
+reportInput = 1
+
+while reportInput == 1:
+    # Reading inputs from the user
+    print("-------------------------------------------------")
+    print("Stock Report Menu Options")
+    print("-------------------------------------------------")
+    print("1. Report changes for a stock\n2. Quit")
+    reportInput = int(input())
+    if reportInput == 2:        # test whether leave the loop or not
+        break
+    print("Please enter the stock symbol:")
+    stockSymbol = input()
+    # convert to upper case
+    # stockSymbol = stockSymbol.upper()
+    print("Please enter the number of days for the analysis: ")
+    numOfDays = int(input())
+
+    # getting dates
+    dt = datetime.date.today()
+    dtPast = dt + datetime.timedelta(days=-numOfDays)
+
+    # print messages of daily percent changes
+    print("************************************************************")
+    print("Daily Percent Changes - "+str(dtPast)+" to "+str(dt)+
+          " * "+stockSymbol.upper()+" *")
+    print("************************************************************")
+
+    # get the original dataframe
+    df1 = getStock(stockSymbol,numOfDays)
+    # adjusted dataframe
+    df2 = stockChanges(df1)
+    print(df2)
+
+    # print messages of cumulative changes
+    print("------------------------------------------------------------")
+    print("Summary of Cumulative Changes for "+stockSymbol)
+    print("------------------------------------------------------------")
+    print(str(dtPast)+" to "+str(dt))
+    cumulativeChanges(df2)
+
